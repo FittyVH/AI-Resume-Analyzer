@@ -7,30 +7,46 @@ const interviewReportModel = require("../models/interviewReport.model")
  */
 async function generateInterViewReportController(req, res) {
     try {
-        const resumeContent = await (new pdfParse.PDFParse(Uint8Array.from(req.file.buffer))).getText()
         const { selfDescription, jobDescription } = req.body
 
+        if (!jobDescription) {
+            return res.status(400).json({ message: "Job description is required." })
+        }
+
+        let resumeText = ""
+        if (req.file) {
+            const parsed = await (new pdfParse.PDFParse(Uint8Array.from(req.file.buffer))).getText()
+            resumeText = parsed?.text || ""
+        }
+
+        if (!resumeText && !selfDescription) {
+            return res.status(400).json({ message: "Please provide either a resume file or a self description." })
+        }
+
         const interViewReportByAi = await generateInterviewReport({
-            resume: resumeContent.text,
-            selfDescription,
+            resume: resumeText,
+            selfDescription: selfDescription || "",
             jobDescription
         })
 
         const interviewReport = await interviewReportModel.create({
             user: req.user.id,
-            resume: resumeContent.text,
-            selfDescription,
+            resume: resumeText,
+            selfDescription: selfDescription || "",
             jobDescription,
             ...interViewReportByAi
         })
 
-        res.status(201).json({
+        return res.status(201).json({
             message: "Interview report generated successfully.",
             interviewReport
         })
     }
     catch (err) {
-        console.log(err)
+        console.error("Error generating interview report:", err)
+        return res.status(500).json({
+            message: err.message || "Failed to generate interview report."
+        })
     }
 }
 
