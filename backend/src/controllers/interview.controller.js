@@ -15,8 +15,14 @@ async function generateInterViewReportController(req, res) {
 
         let resumeText = ""
         if (req.file) {
-            const parsed = await (new pdfParse.PDFParse(Uint8Array.from(req.file.buffer))).getText()
-            resumeText = parsed?.text || ""
+            try {
+                const parsed = await (new pdfParse.PDFParse(Uint8Array.from(req.file.buffer))).getText()
+                resumeText = parsed?.text || ""
+            } catch (fileErr) {
+                console.error("Failed to parse PDF file:", fileErr)
+                // Attempt UTF-8 text fallback
+                resumeText = req.file.buffer.toString("utf-8").replace(/[^\x20-\x7E\n\r\t]/g, " ")
+            }
         }
 
         if (!resumeText && !selfDescription) {
