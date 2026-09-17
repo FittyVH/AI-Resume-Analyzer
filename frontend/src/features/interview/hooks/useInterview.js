@@ -24,7 +24,9 @@ export const useInterview = () => {
                 setReport(response.interviewReport)
             }
         } catch (error) {
-            console.log(error)
+            console.error("Generate strategy error:", error)
+            const msg = error?.response?.data?.message || "Failed to generate strategy. Please check your backend logs or try again."
+            alert(msg)
         } finally {
             setLoading(false)
         }
