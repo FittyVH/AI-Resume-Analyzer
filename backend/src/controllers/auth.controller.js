@@ -41,7 +41,15 @@ async function registerUserController(req, res) {
         { expiresIn: "1d" }
     )
 
-    res.cookie("token", token)
+    const isProduction = process.env.NODE_ENV === "production"
+    const cookieOptions = {
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: isProduction ? "none" : "lax",
+        maxAge: 24 * 60 * 60 * 1000
+    }
+
+    res.cookie("token", token, cookieOptions)
 
     res.status(201).json({
         message: "User registered successfully",
@@ -79,7 +87,15 @@ async function loginUserController(req, res) {
             { expiresIn: "1d" }
         )
 
-        res.cookie("token", token)
+        const isProduction = process.env.NODE_ENV === "production"
+        const cookieOptions = {
+            httpOnly: true,
+            secure: isProduction,
+            sameSite: isProduction ? "none" : "lax",
+            maxAge: 24 * 60 * 60 * 1000
+        }
+
+        res.cookie("token", token, cookieOptions)
         return res.status(200).json({
             message: "User logged in successfully.",
             user: {
@@ -106,7 +122,12 @@ async function logoutUserController(req, res) {
         await tokenBlacklistModel.create({ token })
     }
 
-    res.clearCookie("token") // delete the token from cookie
+    const isProduction = process.env.NODE_ENV === "production"
+    res.clearCookie("token", {
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: isProduction ? "none" : "lax"
+    }) // delete the token from cookie
 
     res.status(200).json({
         message: "User logged out successfully"
