@@ -31,6 +31,26 @@ const interviewReportSchema = z.object({
     title: z.string().describe("The title of the job for which the interview report is generated")
 })
 
+const MODELS = ["gemini-3.6-flash", "gemini-2.5-flash", "gemini-1.5-flash", "gemini-2.0-flash"]
+
+async function generateContentWithFallback({ contents, config }) {
+    let lastError = null
+    for (const model of MODELS) {
+        try {
+            const response = await ai.models.generateContent({
+                model,
+                contents,
+                config
+            })
+            return response
+        } catch (err) {
+            console.warn(`Model ${model} failed, trying next fallback model if available:`, err?.message || err)
+            lastError = err
+        }
+    }
+    throw lastError
+}
+
 async function generateInterviewReport({ resume, selfDescription, jobDescription }) {
     const prompt = `Generate an interview report for a candidate with the following details:
                         Resume: ${resume}
@@ -38,8 +58,7 @@ async function generateInterviewReport({ resume, selfDescription, jobDescription
                         Job Description: ${jobDescription}
     `
 
-    const response = await ai.models.generateContent({
-        model: "gemini-3.6-flash",
+    const response = await generateContentWithFallback({
         contents: prompt,
         config: {
             responseMimeType: "application/json",
@@ -88,8 +107,7 @@ async function generateResumePdf({ resume, selfDescription, jobDescription }) {
                         The resume should not be so lengthy, it should ideally be 1-2 pages long when converted to PDF. Focus on quality rather than quantity and make sure to include all the relevant information that can increase the candidate's chances of getting an interview call for the given job description.
                     `
 
-    const response = await ai.models.generateContent({
-        model: "gemini-3.6-flash",
+    const response = await generateContentWithFallback({
         contents: prompt,
         config: {
             responseMimeType: "application/json",
